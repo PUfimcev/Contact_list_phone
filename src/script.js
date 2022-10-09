@@ -71,7 +71,6 @@ class ContactsApp extends Contacts {
     #inputAddress  = null;
     #inputPhone  = null;
     
-
     constructor(idElem) {
         super();
         this.createUIApp(idElem);
@@ -156,6 +155,8 @@ class ContactsApp extends Contacts {
                 this.onEdit(id);
             });
         })
+        // this.setStorage();
+        this.storage = this.#data;
     }
 
     onRemove = (id) => {
@@ -258,26 +259,135 @@ class ContactsApp extends Contacts {
             const email = inputEmail.value;
             const address = inputAddress.value;
             const phone = inputPhone.value;
-        
+            
             const newData = {
                 name: name,
                 lastname: lastname,
-                email: email,
                 address: address,
                 phone: phone
             };
+
+            let regExp  = /^\D[a-zA-Z0-9_-]{2,}@[\w-]{2,11}\.[\w]{2,11}$/gi;
+            if (regExp.test(inputEmail.value) == true || inputEmail.value == '') {
+                let elemPopUp = document.querySelector('.popup__incorrect');
+                if (elemPopUp) elemPopUp.remove();
+                newData.email = email;
+            } else {
+                this.popupIncorrectEmail();
+                return;
+            }
 
             this.edit(id, newData);
             this.update();
             formEdit.remove();
         });
         
-        btnClose.addEventListener('click', function() {
+        btnClose.addEventListener('click', () => {
             formEdit.remove();
+            let elemPopUp = document.querySelector('.popup__incorrect');
+            if (elemPopUp) elemPopUp.remove();
         });
     
         this.update();
         
+    };
+
+    popupIncorrectEmail = () => {
+        
+        let editMail = document.querySelectorAll('.email')[0];
+    
+        let elemPopUp = document.createElement('div');
+        elemPopUp.classList.add('popup__incorrect');
+
+        let elemPopUpContent = document.createElement('span');
+        elemPopUpContent.classList.add('popup__content');
+        elemPopUpContent.innerHTML = 'Incorrect input of email';
+        elemPopUp.append(elemPopUpContent);
+
+        if (this.#inputEmail && this.#inputEmail.value.length > 0) {
+
+            elemPopUp.style.display="block";
+            this.#inputEmail.after(elemPopUp);
+            
+            this.#inputEmail.addEventListener('input', function(event) {
+                let regExp  = /^\D[a-zA-Z0-9_-]{2,}@[\w-]{2,11}\.[\w]{2,11}$/gi;
+
+                if (event.target.value == '' || regExp.test(event.target.value) == true) {
+                    elemPopUp.style.display="none";
+                    elemPopUp.remove();
+                }
+            });
+        } else if (editMail && editMail.value.length > 0) {
+
+            elemPopUp.style.display="block";
+            editMail.after(elemPopUp);
+            
+            editMail.addEventListener('input', function(event) {
+                let regExp  = /^\D[a-zA-Z0-9_-]{2,}@[\w-]{2,11}\.[\w]{2,11}$/gi;
+
+                if (event.target.value == '' || regExp.test(event.target.value) == true) {
+                    elemPopUp.style.display="none";
+                    elemPopUp.remove();
+                }
+            });
+        }
+    };
+
+    // setStorage = () => {
+    set storage (data){
+
+        let dataTmp = data.map(item => {
+            return {...{ id: item.id }, ...item.get()};
+        });
+        let dataJson = JSON.stringify(dataTmp);
+
+        if (!dataJson) return;
+
+        localStorage.setItem('dataContacts', dataJson);
+
+        if (dataJson || dataJson != '[]') this.setCookie('dataContactsExpire', 1, {secure: true, 'max-age': 86400 })
+    };
+
+    // getStorage = ()=> {
+    get storage (){
+
+        let dataContactsJson = localStorage.getItem('dataContacts');
+        dataContactsJson = JSON.parse(dataContactsJson);
+
+        if (!dataContactsJson) return;
+
+        dataContactsJson.forEach((elem) =>{
+            delete elem.id;
+            this.add(elem);
+        })
+    };
+
+
+    getCookie = (name) => { let matches = document.cookie.match(new RegExp( "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)" )); return matches ? decodeURIComponent(matches[1]) : undefined; };
+
+    setCookie(name, value, options = {}) { options = { path: '/', ...options }; if (options.expires instanceof Date) { options.expires = options.expires.toUTCString(); } let updatedCookie = encodeURIComponent(name) + "=" + encodeURIComponent(value); for (let optionKey in options) { updatedCookie += "; " + optionKey; let optionValue = options[optionKey]; if (optionValue !== true) { updatedCookie += "=" + optionValue; } } document.cookie = updatedCookie; };
+
+    getData = async () => {
+        await fetch('https://jsonplaceholder.typicode.com/users')
+        .then(response => {
+            if (response.ok && response.status == 200) return response.json();
+        })
+        .then(dataJson => {
+            if (dataJson && dataJson.length > 0) {
+                let newDataContacts = dataJson.map(item => {
+                    return { name: item.name,
+                        lastname: '',
+                        email: item.email,
+                        address: item.address.city,
+                        phone: item.phone};
+                    });
+                
+                newDataContacts.forEach(elem => {
+                    this.add(elem);
+                });
+            }
+            this.update();
+        });
     };
 
     onAdd = () => {
@@ -298,7 +408,7 @@ class ContactsApp extends Contacts {
         });
         
         this.update();
-
+        
         this.#inputName.value  = '';
         this.#inputLastName.value  = '';
         this.#inputEmail.value  = '';
@@ -307,6 +417,16 @@ class ContactsApp extends Contacts {
     };
 
     createUIApp = (idElem) => {
+
+        const storageContactDel = this.getCookie('dataContactsExpire');
+        
+        if (!storageContactDel) localStorage.removeItem('dataContacts');
+
+        // this.getStorage();
+        this.storage;
+
+        if (this.get().length == 0) this.getData();``
+        
         const rootElem = document.querySelector('#' + idElem);
 
         if (!rootElem) return;
@@ -349,6 +469,7 @@ class ContactsApp extends Contacts {
         this.#inputName.classList.add('name');
         this.#inputName.type = 'text';
         this.#inputName.name = 'name';
+        this.#inputName.autocomplete = 'on';
         this.#inputName.placeholder = 'Input name';
         itemName.append(pName, this.#inputName);
 
@@ -403,9 +524,17 @@ class ContactsApp extends Contacts {
         addForm.append(itemName,itemLastName, itemEmail, itemAddress, itemPhone, btnFormAdd);
         
         btnAdd.addEventListener('click', () => {
-            this.onAdd();
-            listContacts.style.display = 'block';
-            addForm.style.display = 'none';
+
+            let regExp  = /^\D[a-zA-Z0-9_-]{2,}@[\w-]{2,11}\.[\w]{2,11}$/gi;
+            if (regExp.test(this.#inputEmail.value) == true || this.#inputEmail.value == '') {
+                this.onAdd();
+                listContacts.style.display = 'block';
+                addForm.style.display = 'none';
+                let elemPopUp = document.querySelector('.popup__incorrect');
+                if (elemPopUp) elemPopUp.remove();
+            } else {
+                this.popupIncorrectEmail();
+            }
         });
 
         btnShow.addEventListener('click', () => {
@@ -419,18 +548,18 @@ class ContactsApp extends Contacts {
             this.#inputPhone.value  = '';
 
             let contactElemFull = document.querySelector('.contact__full');
-            console.log(contactElemFull);
-            contactElemFull.removeAttribute('style'); 
+            if (contactElemFull) contactElemFull.removeAttribute('style'); 
+
+            let elemPopUp = document.querySelector('.popup__incorrect');
+            if (elemPopUp) elemPopUp.remove();
         });
 
         btnNewAdd.addEventListener('click', () =>{
             listContacts.style.display = 'none';
             addForm.style.display = 'block';
         });
-
         this.update();
     };
-
 };
 
 window.addEventListener('load', () => {

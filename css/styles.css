@@ -27,7 +27,6 @@ html, body {
     display: flex;
     height: 100vh;
     justify-content: center;
-    background-color: #fff;
 }
 
 .contacts {
@@ -53,6 +52,7 @@ h3 {
     height: 100%;
     position: relative;
     overflow: hidden;
+    background-color: #fff;
 }
 
 .contacts__show_list {

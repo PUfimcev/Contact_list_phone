@@ -52,7 +52,6 @@ h3 {
     height: 100%;
     position: relative;
     overflow: hidden;
-    background-color: #fff;
 }
 
 .contacts__show_list {
@@ -82,6 +81,7 @@ li:hover {
     margin: 0 auto;
     white-space: normal;
     word-wrap: break-word;
+    background-color: #fff;
 }
 
 .add_newContact {
